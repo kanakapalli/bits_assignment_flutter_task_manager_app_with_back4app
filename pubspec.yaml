@@ -39,7 +39,7 @@ dependencies:
   parse_server_sdk_flutter: ^9.0.0
 
   # UI Enhancement packages for Skeuomorphic design
-  flutter_neumorphic: ^3.2.0
+  flutter_neumorphic_plus: ^3.3.0
   google_fonts: ^4.0.4
   glassmorphism: ^3.0.0
 

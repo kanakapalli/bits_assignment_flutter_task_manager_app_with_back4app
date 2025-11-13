@@ -1,4 +1,4 @@
-import 'package:flutter_neumorphic/flutter_neumorphic.dart';
+import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import '../models/task.dart';
@@ -47,6 +47,18 @@ class _TaskListScreenState extends State<TaskListScreen> with SingleTickerProvid
       return;
     }
 
+    // Verify session is still valid
+    final sessionResponse = await currentUser.getUpdatedUser();
+    if (!sessionResponse.success) {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      }
+      return;
+    }
+
     final QueryBuilder<Task> query = QueryBuilder<Task>(Task())
       ..whereEqualTo(Task.keyCreatedBy, currentUser)
       ..orderByDescending('createdAt');
@@ -59,6 +71,19 @@ class _TaskListScreenState extends State<TaskListScreen> with SingleTickerProvid
       setState(() {
         tasks = response.results!.cast<Task>();
       });
+    } else {
+      // Handle error case - show empty list rather than crash
+      setState(() {
+        tasks = [];
+      });
+      if (mounted && response.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading tasks: ${response.error!.message}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -72,7 +97,7 @@ class _TaskListScreenState extends State<TaskListScreen> with SingleTickerProvid
           children: [
             Icon(Icons.delete_forever, color: Colors.red[400]),
             const SizedBox(width: 8),
-            Text('Delete Task', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            Flexible(child: Text('Delete Task', style: GoogleFonts.poppins(fontWeight: FontWeight.w600))),
           ],
         ),
         content: Text(
@@ -105,16 +130,25 @@ class _TaskListScreenState extends State<TaskListScreen> with SingleTickerProvid
       final response = await task.delete();
       if (response.success) {
         _loadTasks();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Task deleted successfully'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete task: ${response.error?.message ?? "Unknown error"}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
-    }
-  }
-
-  Future<void> _toggleTaskCompletion(Task task) async {
-    task.isCompleted = !task.isCompleted;
-    final response = await task.save();
-
-    if (response.success) {
-      _loadTasks();
     }
   }
 
@@ -128,7 +162,7 @@ class _TaskListScreenState extends State<TaskListScreen> with SingleTickerProvid
           children: [
             Icon(Icons.logout, color: Colors.orange[600]),
             const SizedBox(width: 8),
-            Text('Logout', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            Flexible(child: Text('Logout', style: GoogleFonts.poppins(fontWeight: FontWeight.w600))),
           ],
         ),
         content: Text(
@@ -184,89 +218,81 @@ class _TaskListScreenState extends State<TaskListScreen> with SingleTickerProvid
         ),
         child: Container(
           padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Checkbox
-              NeumorphicCheckbox(
-                value: task.isCompleted,
-                onChanged: (value) => _toggleTaskCompletion(task),
-                style: NeumorphicCheckboxStyle(
-                  selectedDepth: -3,
-                  unselectedDepth: 2,
-                  boxShape: NeumorphicBoxShape.roundRect(BorderRadius.circular(8)),
-                  selectedColor: Colors.green[400],
-                ),
-              ),
-              const SizedBox(width: 16),
-
-              // Task content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      task.title ?? '',
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: task.isCompleted ? Colors.grey[600] : Colors.grey[800],
-                        decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-                      ),
-                    ),
-                    if (task.description != null && task.description!.isNotEmpty) ...[
-                      const SizedBox(height: 8),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Task content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        task.description!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        task.title ?? '',
                         style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: task.isCompleted ? Colors.grey[500] : Colors.grey[600],
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: task.isCompleted ? Colors.grey[600] : Colors.grey[800],
                           decoration: task.isCompleted ? TextDecoration.lineThrough : null,
                         ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      if (task.description != null && task.description!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          task.description!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: task.isCompleted ? Colors.grey[500] : Colors.grey[600],
+                            decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                          ),
+                        ),
+                      ],
                     ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Action buttons
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    NeumorphicButton(
+                      onPressed: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AddEditTaskScreen(task: task),
+                          ),
+                        );
+                        if (result == true) {
+                          _loadTasks();
+                        }
+                      },
+                      style: NeumorphicStyle(
+                        boxShape: NeumorphicBoxShape.roundRect(BorderRadius.circular(12)),
+                        depth: 4,
+                      ),
+                      padding: const EdgeInsets.all(10),
+                      child: Icon(Icons.edit_outlined, size: 18, color: Colors.blue[600]),
+                    ),
+                    const SizedBox(height: 8),
+                    NeumorphicButton(
+                      onPressed: () => _deleteTask(task),
+                      style: NeumorphicStyle(
+                        boxShape: NeumorphicBoxShape.roundRect(BorderRadius.circular(12)),
+                        depth: 4,
+                      ),
+                      padding: const EdgeInsets.all(10),
+                      child: Icon(Icons.delete_outline, size: 18, color: Colors.red[600]),
+                    ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 12),
-
-              // Action buttons
-              Column(
-                children: [
-                  NeumorphicButton(
-                    onPressed: () async {
-                      final result = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => AddEditTaskScreen(task: task),
-                        ),
-                      );
-                      if (result == true) {
-                        _loadTasks();
-                      }
-                    },
-                    style: NeumorphicStyle(
-                      boxShape: NeumorphicBoxShape.roundRect(BorderRadius.circular(12)),
-                      depth: 4,
-                    ),
-                    padding: const EdgeInsets.all(12),
-                    child: Icon(Icons.edit_outlined, size: 20, color: Colors.blue[600]),
-                  ),
-                  const SizedBox(height: 8),
-                  NeumorphicButton(
-                    onPressed: () => _deleteTask(task),
-                    style: NeumorphicStyle(
-                      boxShape: NeumorphicBoxShape.roundRect(BorderRadius.circular(12)),
-                      depth: 4,
-                    ),
-                    padding: const EdgeInsets.all(12),
-                    child: Icon(Icons.delete_outline, size: 20, color: Colors.red[600]),
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -278,16 +304,15 @@ class _TaskListScreenState extends State<TaskListScreen> with SingleTickerProvid
     return Scaffold(
       backgroundColor: NeumorphicTheme.baseColor(context),
       appBar: NeumorphicAppBar(
-        title: Row(
-          children: [
-            Icon(Icons.task_alt_rounded, color: Colors.deepPurple[400]),
-            const SizedBox(width: 8),
-            Text(
-              'My Tasks',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-            ),
-          ],
+        leading: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Icon(Icons.task_alt_rounded, color: Colors.deepPurple[400], size: 28),
         ),
+        title: Text(
+          'Tasks',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 20),
+        ),
+        centerTitle: false,
         actions: [
           NeumorphicButton(
             onPressed: _loadTasks,

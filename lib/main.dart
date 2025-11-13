@@ -1,6 +1,7 @@
-import 'package:flutter_neumorphic/flutter_neumorphic.dart';
+import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
+import 'models/task.dart';
 import 'screens/login_screen.dart';
 import 'screens/task_list_screen.dart';
 
@@ -18,6 +19,9 @@ void main() async {
     clientKey: keyClientKey,
     autoSendSessionId: true,
     debug: true,
+    registeredSubClassMap: <String, ParseObjectConstructor>{
+      'Task': () => Task(),
+    },
   );
 
   runApp(const MyApp());

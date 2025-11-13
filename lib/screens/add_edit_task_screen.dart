@@ -1,4 +1,4 @@
-import 'package:flutter_neumorphic/flutter_neumorphic.dart';
+import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import '../models/task.dart';
@@ -57,6 +57,12 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     if (!_isEditing) {
       task.createdBy = currentUser;
       task.isCompleted = false;
+
+      // Set ACL to ensure only the creator can read/write
+      final acl = ParseACL(owner: currentUser);
+      acl.setPublicReadAccess(allowed: false);
+      acl.setPublicWriteAccess(allowed: false);
+      task.setACL(acl);
     }
 
     final response = await task.save();
@@ -84,7 +90,7 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
           children: [
             Icon(Icons.check_circle_outline, color: Colors.green[400]),
             const SizedBox(width: 8),
-            Text('Success!', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            Flexible(child: Text('Success!', style: GoogleFonts.poppins(fontWeight: FontWeight.w600))),
           ],
         ),
         content: Text(
@@ -119,7 +125,7 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
           children: [
             Icon(Icons.error_outline, color: Colors.red[400]),
             const SizedBox(width: 8),
-            Text('Error', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            Flexible(child: Text('Error', style: GoogleFonts.poppins(fontWeight: FontWeight.w600))),
           ],
         ),
         content: Text(message, style: GoogleFonts.poppins()),
@@ -143,15 +149,19 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
       backgroundColor: NeumorphicTheme.baseColor(context),
       appBar: NeumorphicAppBar(
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               _isEditing ? Icons.edit_outlined : Icons.add_task,
               color: _isEditing ? Colors.blue[600] : Colors.deepPurple[400],
             ),
             const SizedBox(width: 8),
-            Text(
-              _isEditing ? 'Edit Task' : 'Add Task',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            Flexible(
+              child: Text(
+                _isEditing ? 'Edit Task' : 'Add Task',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -332,6 +342,7 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                           )
                         : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 _isEditing ? Icons.update : Icons.save,
@@ -339,12 +350,15 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                                 size: 24,
                               ),
                               const SizedBox(width: 12),
-                              Text(
-                                _isEditing ? 'Update Task' : 'Create Task',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
+                              Flexible(
+                                child: Text(
+                                  _isEditing ? 'Update Task' : 'Create Task',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
