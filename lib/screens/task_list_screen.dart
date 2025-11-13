@@ -320,20 +320,16 @@ class _TaskListScreenState extends State<TaskListScreen> with SingleTickerProvid
               boxShape: NeumorphicBoxShape.circle(),
               depth: 2,
             ),
-            padding: const EdgeInsets.all(12),
             child: Icon(Icons.refresh, color: Colors.grey[700], size: 20),
           ),
-          const SizedBox(width: 8),
           NeumorphicButton(
             onPressed: _logout,
             style: const NeumorphicStyle(
               boxShape: NeumorphicBoxShape.circle(),
               depth: 2,
             ),
-            padding: const EdgeInsets.all(12),
             child: Icon(Icons.logout, color: Colors.orange[600], size: 20),
           ),
-          const SizedBox(width: 12),
         ],
       ),
       body: _isLoading
